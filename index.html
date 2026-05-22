@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pump Naming Tool</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f4f6f9; --surface: #ffffff; --border: #dde3ec;
+      --accent: #1a56a0; --accent-light: #e8f0fb; --accent-hover: #154389;
+      --text: #1c2536; --text-muted: #5a6a82;
+      --tag-bg: #e8f0fb; --tag-border: #b6cef5; --tag-text: #1a4a8a;
+      --danger: #c0392b; --danger-bg: #fdf0ef;
+      --success: #1a7a4a; --success-bg: #eaf5ef;
+      --shadow: 0 2px 12px rgba(26,86,160,0.08); --radius: 10px;
+    }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    header { background: var(--accent); color: #fff; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: 0.01em; }
+    header .subtitle { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; }
+    .header-actions { display: flex; gap: 10px; }
+    button { font-family: inherit; cursor: pointer; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 500; transition: background 0.15s, transform 0.1s; }
+    button:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; padding: 9px 18px; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary { background: transparent; color: #fff; padding: 8px 16px; border: 1.5px solid rgba(255,255,255,0.5); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+    .btn-outline { background: transparent; color: var(--accent); padding: 7px 14px; border: 1.5px solid var(--accent); }
+    .btn-outline:hover { background: var(--accent-light); }
+    .btn-danger { background: transparent; color: var(--danger); padding: 6px 12px; border: 1.5px solid var(--danger); font-size: 0.8rem; }
+    .btn-danger:hover { background: var(--danger-bg); }
+    .btn-sm { padding: 5px 11px; font-size: 0.8rem; }
+    .page { max-width: 900px; margin: 0 auto; padding: 32px 20px; }
+    .search-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 28px 24px; margin-bottom: 24px; }
+    .search-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px; }
+    .search-row { display: flex; gap: 10px; }
+    .search-row input { flex: 1; padding: 13px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 1.05rem; font-family: inherit; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; }
+    .search-row input:focus { border-color: var(--accent); background: #fff; }
+    .search-row input::placeholder { color: #aab3c0; }
+    #results { margin-top: 20px; }
+    .result-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px; box-shadow: var(--shadow); animation: fadeIn 0.18s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .result-card:hover { border-color: var(--accent); }
+    .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .result-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .match-count { font-size: 0.75rem; color: var(--text-muted); background: var(--bg); padding: 3px 9px; border-radius: 20px; border: 1px solid var(--border); }
+    .names-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .name-tag { background: var(--tag-bg); border: 1px solid var(--tag-border); color: var(--tag-text); padding: 5px 13px; border-radius: 20px; font-size: 0.875rem; font-weight: 500; }
+    .name-tag.matched { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .name-tag.current-name { border-style: dashed; border-width: 2px; }
+    .result-notes { font-size: 0.825rem; color: var(--text-muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-style: italic; }
+    .no-results { text-align: center; padding: 36px 20px; color: var(--text-muted); background: var(--surface); border-radius: var(--radius); border: 1.5px dashed var(--border); }
+    .no-results .icon { font-size: 2rem; margin-bottom: 10px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .admin-panel { margin-top: 32px; }
+    .form-card { background: var(--accent-light); border: 1.5px solid var(--tag-border); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 20px; }
+    .form-title { font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-group input, .form-group textarea { width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 0.9rem; font-family: inherit; color: var(--text); background: #fff; outline: none; transition: border-color 0.15s; }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .names-input-area { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px; border: 1.5px solid var(--border); border-radius: 7px; background: #fff; min-height: 48px; cursor: text; align-items: center; }
+    .names-input-area:focus-within { border-color: var(--accent); }
+    .names-input-area input { border: none; padding: 2px 4px; flex: 1; min-width: 120px; font-size: 0.9rem; outline: none; background: transparent; }
+    .editable-tag { display: inline-flex; align-items: center; gap: 5px; background: var(--tag-bg); border: 1px solid var(--tag-border); color: var(--tag-text); padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; white-space: nowrap; }
+    .editable-tag .remove-name { cursor: pointer; color: var(--accent); font-weight: 700; font-size: 1rem; line-height: 1; background: none; border: none; padding: 0 0 0 2px; }
+    .editable-tag .remove-name:hover { color: var(--danger); }
+    .form-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 5px; }
+    .form-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .pump-record { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .pump-record:hover { border-color: var(--accent); }
+    .pump-record-names { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+    .pump-record-actions { display: flex; gap: 7px; flex-shrink: 0; }
+    #status-bar { position: fixed; bottom: 20px; right: 20px; padding: 11px 18px; border-radius: 8px; font-size: 0.875rem; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000; }
+    #status-bar.show { opacity: 1; }
+    #status-bar.success { background: var(--success-bg); color: var(--success); border: 1px solid #a3d9b8; }
+    #status-bar.error { background: var(--danger-bg); color: var(--danger); border: 1px solid #f5b7b1; }
+    .stats-bar { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat { background: var(--surface); border-radius: var(--radius); padding: 14px 20px; box-shadow: var(--shadow); flex: 1; text-align: center; }
+    .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+    .tab { padding: 11px 22px; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.15s, border-color 0.15s; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover:not(.active) { color: var(--text); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 0.78rem; color: var(--text-muted); align-items: center; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 10px; display: inline-block; }
+    .legend-dot.matched { background: var(--accent); }
+    .legend-dot.current { background: var(--tag-bg); border: 2px dashed var(--tag-border); }
+    .legend-dot.other { background: var(--tag-bg); border: 1px solid var(--tag-border); }
+    .empty-admin { text-align: center; padding: 40px 20px; color: var(--text-muted); border: 1.5px dashed var(--border); border-radius: var(--radius); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: var(--radius); padding: 28px; max-width: 480px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.2); }
+    .modal h3 { margin-bottom: 12px; color: var(--text); }
+    .modal textarea { width: 100%; height: 140px; padding: 10px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 0.85rem; font-family: monospace; resize: vertical; outline: none; margin-bottom: 14px; }
+    .modal textarea:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    .btn-modal-cancel { background: var(--bg); color: var(--text); padding: 9px 18px; border: 1.5px solid var(--border); border-radius: 6px; }
+    .btn-modal-cancel:hover { background: var(--border); }
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; flex-direction: column; align-items: flex-start; gap: 10px; }
+      .page { padding: 20px 12px; }
+      .stats-bar { flex-direction: column; gap: 8px; }
+      .search-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>&#9881;&#65039; Pump Naming Tool</h1>
+    <div class="subtitle">Look up any product name &mdash; past or present</div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-secondary" onclick="exportData()">&#11015; Export</button>
+    <button class="btn-secondary" onclick="showImportModal()">&#11014; Import</button>
+  </div>
+</header>
+
+<div class="page">
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-value" id="stat-pumps">0</div><div class="stat-label">Pump Records</div></div>
+    <div class="stat"><div class="stat-value" id="stat-names">0</div><div class="stat-label">Total Names</div></div>
+    <div class="stat"><div class="stat-value" id="stat-avg">0</div><div class="stat-label">Avg. Names / Pump</div></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('search')">&#128269; Search</div>
+    <div class="tab" onclick="switchTab('admin')">&#9881; Manage Records</div>
+  </div>
+
+  <div class="tab-panel active" id="tab-search">
+    <div class="search-card">
+      <div class="search-label">Enter any pump name</div>
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Type a name, part number, or alias&hellip;" oninput="doSearch()" autocomplete="off" />
+        <button class="btn-primary" onclick="doSearch()">Search</button>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot matched"></span> Matched name</span>
+        <span class="legend-item"><span class="legend-dot current"></span> Current / preferred name</span>
+        <span class="legend-item"><span class="legend-dot other"></span> Alternate / historic name</span>
+      </div>
+    </div>
+    <div id="results"></div>
+  </div>
+
+  <div class="tab-panel" id="tab-admin">
+    <div class="form-card" id="form-card">
+      <div class="form-title" id="form-title">&#10133; Add New Pump Record</div>
+      <div class="form-group">
+        <label>Current / Preferred Name <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="field-current" placeholder="e.g. Deep Flow 2 - 40" />
+        <div class="form-hint">The official name staff should use today.</div>
+      </div>
+      <div class="form-group">
+        <label>All Known Names (historic, regional, alternate)</label>
+        <div class="names-input-area" id="names-area" onclick="focusNameInput()">
+          <input type="text" id="name-input" placeholder="Type a name and press Enter&hellip;" onkeydown="handleNameKey(event)" />
+        </div>
+        <div class="form-hint">Press <strong>Enter</strong> or <strong>comma</strong> to add each name.</div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="field-notes" placeholder="e.g. Renamed in 2022. Known as X in Europe."></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn-primary" onclick="saveRecord()">Save Record</button>
+        <button class="btn-outline" onclick="clearForm()">Clear</button>
+      </div>
+    </div>
+    <div class="section-header">
+      <div class="section-title">All Pump Records</div>
+      <div style="font-size:0.8rem;color:var(--text-muted)" id="record-count-label"></div>
+    </div>
+    <div id="records-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h3>Import Records</h3>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">Paste JSON from a previous export. New records will be merged with existing ones.</p>
+    <textarea id="import-text" placeholder="Paste exported JSON here&hellip;"></textarea>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="btn-primary" onclick="doImport()">Import</button>
+    </div>
+  </div>
+</div>
+
+<div id="status-bar"></div>
+
+<script>
+  // ── Built-in data (baked in — no import needed) ──────────────────────────
+  const BUILT_IN_DATA = [{"id":1666786166,"current":"Power Flow 1.5","names":["2/2AGSFBR-10/18-15/26-110-1100-DC","A1526-110","AGSB 1.5-1-100","AGSB 2-1.5-120","AGSB 2-1.5-140","AGSF 2-1.5-26","AGSF2-1.5-26","DCPM26-15-110-1100","Power Flow 1.5"],"notes":"Previously known as: AGSB 1.5-1-100, AGSB 2-1.5-120, AGSB 2-1.5-140, AGSF 2-1.5-26, AGSF2-1.5-26"},{"id":8761247734,"current":"Power Flow 1.5","names":["2/2AGSFBR-10/18-15/26-72-1100-DC","A1526-72","AGSB 1.5-1-100","AGSB 2-1.5-120","AGSB 2-1.5-140","AGSF 2-1.5-26","AGSF2-1.5-26","DCPM26-15-72-1100","Power Flow 1.5"],"notes":"Previously known as: AGSB 1.5-1-100, AGSB 2-1.5-120, AGSB 2-1.5-140, AGSF 2-1.5-26, AGSF2-1.5-26 | Package names: AGSF2-1.5-26"},{"id":2249911287,"current":"Power Flow 1.5 AD","names":["2/2AGSFBR-10/18-15/26-110-1100-AD","DCPM26-15-110-1100-AD","Power Flow 1.5 AD"],"notes":""},{"id":3249179833,"current":"Power Flow 2","names":["3/3AGSFBR-10/25-17/50-110-1500-DC","AGSB 2-120","AGSF 3-2-26","DPCM50-17-110-1500","Power Flow 2"],"notes":"Previously known as: AGSB 2-120, AGSF 3-2-26"},{"id":445918267,"current":"Power Flow 2 AD","names":["3/3AGSFBR-10/25-17/50-110-1500-ADS","C1750-110","DCPM50-17-110-1500-AD","Power Flow 2 AD"],"notes":""},{"id":9022172211,"current":"Power Flow 3 AD","names":["4/4AGSFBR-10/40-20/60-200-2200-ADS","AGSF 4-3-26","C2060-200","DCPM60-20-200-2200-AD","Power Flow 3 AD"],"notes":"Previously known as: AGSF 4-3-26"},{"id":6052345801,"current":"Deep Flow 0.5 - 10","names":["3/1.25AGSBSS-10/4-50/4.5-48-400-DC","3DSC4.5-50-48-400","Deep Flow 0.5 - 10"],"notes":""},{"id":2106490841,"current":"Deep Flow 0.75 - 50","names":["3/1.5AGSBPC-25/4-50/5-48-600-DC","3DPC5.2-50-48-600","Deep Flow 0.75 - 50","G5005-48"],"notes":""},{"id":2904287609,"current":"Deep Flow 1 - 25","names":["3/1.5AGSBPC-25/5-46/7-72-750-DC","3DPC7-46-72-750","AGSB1.5-1-100","Deep Flow 1 - 25","G4607-72"],"notes":"Package names: AGSB1.5-1-100"},{"id":4712983792,"current":"Deep Flow 1.5 - 30","names":["4/2AGSBPC-30/6-49/13-110-1100-DC","4DPC13-49-110-1100","AGSB2-1.5-140","Deep Flow 1.5 - 30","G4913-110"],"notes":"Package names: AGSB2-1.5-140"},{"id":906830741,"current":"Deep Flow 1.5 - 30","names":["4/2AGSBPC-30/5-58/9-110-1100-DC","4DPC9-58-110-1100","AGSB2-1.5-140","AGSB2-1.5-140 AD","Deep Flow 1.5 - 30","G5809-110"],"notes":"Package names: AGSB2-1.5-140, AGSB2-1.5-140 AD"},{"id":1998360470,"current":"Deep Flow 1.5 - 30 AD","names":["4/2AGSBPC-30/6-49/13-110-1100-ADS","4DPC13-49-110-1100-AD","Deep Flow 1.5 - 30 AD","I4913-110"],"notes":""},{"id":5982577870,"current":"Deep Flow 1.5 - 30 AD","names":["4/2AGSBPC-30/5-58/9-110-1100-ADS","4DPC9-58-110-1100-AD","Deep Flow 1.5 - 30 AD","I5809-110"],"notes":""},{"id":8018211215,"current":"Deep Flow 1.5 - 35","names":["4/2AGSBSS-30/6-60/11-110-1100-DC","4DSC11-60-110-1100","D6011-110","Deep Flow 1.5 - 35"],"notes":""},{"id":4835491895,"current":"Deep Flow 1.5 - 35 AD","names":["4/2AGSBSS-30/6-60/11-110-1100-ADS","4DSC11-60-110-1100-AD","Deep Flow 1.5 - 35 AD","F6011-110"],"notes":""},{"id":5714515098,"current":"Deep Flow 1.5 - 40","names":["3/1.5AGSBPC-40/5-62/8-110-1100-DC","3DPC8-62-110-1100","Deep Flow 1.5 - 40"],"notes":""},{"id":4843434861,"current":"Deep Flow 1.5 - 40 AD","names":["3/1.5AGSBPC-40/5-62/8-110-1100-ADS","3DPC8-62-110-1100-AD","Deep Flow 1.5 - 40 AD"],"notes":""},{"id":7400977731,"current":"Deep Flow 2 - 40","names":["4/2AGSBSS-40/7-72/9-110-1500-DC","4DSC9-72-110-1500","AGSB2-1.5-140","AGSB2-2-220","AGSB2-2-220 AD","D7209-110","Deep Flow 2 - 40"],"notes":"Package names: AGSB2-1.5-140, AGSB2-2-220, AGSB2-2-220 AD"},{"id":6832983536,"current":"Deep Flow 2 - 40 AD","names":["4/2AGSBSS-40/7-72/9-110-1500-ADS","4DSC9-72-110-1500-AD","Deep Flow 2 - 40 AD","F7209-110"],"notes":""},{"id":6321439867,"current":"Deep Flow 2 – 20","names":["4/2AGSBSS-20/11-34/19-110-1500-DC","4DSC19-34-110-1500","D3419-110","Deep Flow 2 – 20"],"notes":""},{"id":7719058264,"current":"Deep Flow 2 – 20 AD","names":["4/2AGSBSS-20/11-34/19-110-1500-ADS","4DSC19-34-110-1500-AD","Deep Flow 2 – 20 AD","F3419-110"],"notes":""},{"id":6399352241,"current":"Deep Flow 3 - 80 AD","names":["4/2AGSBPC-80/5-125/9.5-200-2200-ADS","4DPC9.5-125-200-2200 AD","Deep Flow 3 - 80 AD"],"notes":""},{"id":5286240027,"current":"Deep Flow XL 2 - 10","names":["4-6/3AGSBSS-10/22-22/36-110-1500-DC","4/6DSC36-22-110-1500","AGSB3-2-60","AGSB3-2-60 AD","D3622-110","Deep Flow XL 2 - 10"],"notes":"Package names: AGSB3-2-60, AGSB3-2-60 AD"},{"id":3217680072,"current":"Deep Flow XL 2 - 10 AD","names":["4-6/3AGSBSS-10/22-22/36-110-1500-ADS","4/6DSC36-22-110-1500-AD","Deep Flow XL 2 - 10 AD","F3622-110"],"notes":""},{"id":9118471664,"current":"3DPC 5.5-65-72-750","names":["3/1.5AGSBPC-40/2.5-65/5.5-72-750-DC","3DPC 5.5-65-72-750","G6505-72"],"notes":""},{"id":9749825601,"current":"3DPC3.5-80-48-600","names":["3/1.25AGSBPC-45/2-80/3.5-48-600-DC","3DPC3.5-80-48-600","G8004-48"],"notes":""},{"id":235632834,"current":"3DPC7-46-72-750-AD","names":["3/1.5AGSBPC-25/5-46/7-72-750-ADS","3DPC7-46-72-750-AD","I4607-72"],"notes":""},{"id":5603207366,"current":"4/6DSC36-22-110-1500-HV","names":["4-6/3AGSBSS-10/22-22/36-110-1500-HV","4/6DSC36-22-110-1500-HV","E3622-110"],"notes":""},{"id":5885032814,"current":"4/6DSC36-38-200-2200-AD","names":["4-6/3AGSBSS-25/16-38/36-200-2200-ADS","4/6DSC36-38-200-2200-AD","F3836-200"],"notes":""},{"id":6000549978,"current":"4/6DSC36-38-300-2200-AD","names":["4-6/3AGSBSS-25/16-38/36-300-2200-ADS","4/6DSC36-38-300-2200-AD","F3836-300"],"notes":""},{"id":7017364495,"current":"4/6DSC36-75-380/520-4000-AD","names":["4-6/3AGSBSS-40/20-75/36-520-4000-ADS","4/6DSC36-75-380/520-4000-AD","F7536-520"],"notes":""},{"id":8272183275,"current":"4/6DSC36-80-380/550-4000-AD","names":["4-6/3AGSBSS-40/20-80/36-550-4000-ADS","4/6DSC36-80-380/550-4000-AD","F8036-550"],"notes":""},{"id":8360431417,"current":"4DLR11.5-100-110-1500","names":["4/2AGSBPC-45/7-100/12-110-1500-DC","4DLR11.5-100-110-1500","AGSB2-2-220","AGSB2-2-220 AD","G10011-110"],"notes":"Package names: AGSB2-2-220, AGSB2-2-220 AD"},{"id":5690399476,"current":"4DLR11.5-100-110-1500-AD","names":["4/2AGSBPC-45/7-100/12-110-1500-ADS","4DLR11.5-100-110-1500-AD","I11011-110"],"notes":""},{"id":6777110411,"current":"4DLR11.5-100-110-1500-HV","names":["4/2AGSBPC-45/7-100/12-110-1500-HV","4DLR11.5-100-110-1500-HV","H11011-110"],"notes":""},{"id":4232448423,"current":"4DLR11.5-100-200-1500-HV","names":["4/2AGSBPC-45/7-100/12-200-1500-HV","4DLR11.5-100-200-1500-HV","H11011-200"],"notes":""},{"id":4870292789,"current":"4DLR12-75-72-1100","names":["4/2AGSBPC-35/7-75/12-72-1100-DC","4DLR12-75-72-1100","G7512-72"],"notes":""},{"id":2252631784,"current":"4DLR15-45-110-750","names":["4/2AGSBPC-15/8-45/15-110-750-DC","4DLR15-45-110-750","G4515-110"],"notes":""},{"id":1319130912,"current":"4DLR15-45-72-750","names":["4/2AGSBPC-15/8-45/15-72-750-DC","4DLR15-45-72-750","G4515-72"],"notes":""},{"id":4548174791,"current":"4DLR17-95-200-2200-AD","names":["4/2AGSBPC-45/9-95/17-200-2200-ADS","4DLR17-95-200-2200-AD","I9517-200"],"notes":""},{"id":4557834706,"current":"4DLR17-95-250-2200-AD","names":["4/2AGSBPC-45/9-95/17-250-2200-ADS","4DLR17-95-250-2200-AD","I9517-250"],"notes":""},{"id":4099186443,"current":"4DLR17-95-300-2200-AD","names":["4/2AGSBPC-45/9-95/17-300-2200-ADS","4DLR17-95-300-2200-AD","I9517-300"],"notes":""},{"id":5801562582,"current":"4DLR20-38-110-1500","names":["4/2AGSBPC-20/12-38/20-110-1500-DC","4DLR20-38-110-1500","G3820-110"],"notes":""},{"id":3076849862,"current":"4DLR22-70-250-2200-AD","names":["4/2AGSBPC-30/12-70/22-250-2200-ADS","4DLR22-70-250-2200-AD","I7022-250"],"notes":""},{"id":2720770930,"current":"4DLR22-70-300-2200-AD","names":["4/2AGSBPC-30/12-70/22-300-2200-ADS","4DLR22-70-300-2200-AD","I7022-300"],"notes":""},{"id":941105103,"current":"4DLR7.5-110-110-1500","names":["4/2AGSBPC-60/5-110/7.5-110-1500-DC","4DLR7.5-110-110-1500","G11007-110"],"notes":""},{"id":9676697903,"current":"4DLR7.5-110-110-1500-HV","names":["4/2AGSBPC-60/5-110/7.5-110-1500-HV","4DLR7.5-110-110-1500-HV","H11007-110"],"notes":""},{"id":6109220300,"current":"4DLRC5-85-110-750","names":["4/1.25AGSBPC-50/2-85/5-110-750-DC","4DLRC5-85-110-750","G8505-110"],"notes":""},{"id":4270909507,"current":"4DPC13-110-300-2200-AD","names":["4/2AGSBPC-55/8-110/13-300-2200-ADS","4DPC13-110-300-2200-AD","I11013-300"],"notes":""},{"id":4052264476,"current":"4DPC13-54-110-1300","names":["4/2AGSBPC-33/7.5-54/13-110-1300-DC","4DPC13-54-110-1300","G5413-110"],"notes":""},{"id":156016731,"current":"4DPC13-60-110-1500","names":["4/2AGSBPC-35/8-60/13-110-1500-DC","4DPC13-60-110-1500","G6013-110"],"notes":""},{"id":9257890287,"current":"4DPC17-48-110-1500-HV","names":["4/2AGSBPC-25/10-48/17-110-1500-HV","4DPC17-48-110-1500-HV","H4817-110"],"notes":""},{"id":3552110717,"current":"4DPC4.5-75-72-750","names":["4/1.25AGSBPC-50/2-75/4.5-72-750-DC","4DPC4.5-75-72-750","G7504-72"],"notes":""},{"id":7924568976,"current":"4DPC6-56-72-750","names":["4/1.25AGSBPC-30/4-56/6-72-750-DC","4DPC6-56-72-750","G5606-72"],"notes":""},{"id":4712217452,"current":"4DPC6-84-110-1100","names":["4/2AGSBPC-50/4-84/6-110-1100-DC","4DPC6-84-110-1100","G8406-110"],"notes":""},{"id":8262600100,"current":"4DPC9-45-96-750","names":["4/2AGSBPC-20/5-45/9-96-750-DC","4DPC9-45-96-750","G4509-96"],"notes":""},{"id":4811032020,"current":"4DPC9.5-125-200-2200-AD","names":["4/2AGSBPC-80/5-125/9.5-200-2200-ADS","4DPC9.5-125-200-2200-AD","I12509-200"],"notes":""},{"id":5649231477,"current":"4DPC9.5-125-300-2200-AD","names":["4/2AGSBPC-80/5-125/9.5-300-2200-ADS","4DPC9.5-125-300-2200-AD","I12509-300"],"notes":""},{"id":5261688963,"current":"4DSC15-45-72-750-AD","names":["4/2AGSBSS-15/8-45/15-72-750-ADS","4DSC15-45-72-750-AD","F4515-72"],"notes":""},{"id":6270628685,"current":"4DSC18-95-200V-2200-AD","names":["4/2AGSBSS-45/9-95/18-200-2200-ADS","4DSC18-95-200V-2200-AD","F9518-200"],"notes":""},{"id":2727691948,"current":"4DSC19-135-380/550-4000-AD","names":["4/2AGSBSS-90/8-135/19-550-4000-ADS","4DSC19-135-380/550-4000-AD","F13519-550"],"notes":""},{"id":3053930787,"current":"4DSC19-60-300-2200-AD","names":["4/2AGSBSS-40/9-60/19-300-2200-ADS","4DSC19-60-300-2200-AD","F6019-200"],"notes":""},{"id":5573466264,"current":"4DSC20-48-110-1500","names":["4/2AGSBPC-30/9-48/20-110-1500-DC","4DSC20-48-110-1500","D4820-110"],"notes":""},{"id":7999434680,"current":"4DSC20-48-110-1500-AD","names":["4/2AGSBPC-30/9-48/20-110-1500-ADS","4DSC20-48-110-1500-AD","F4820-110"],"notes":""},{"id":4058363880,"current":"4DSC30-36-300-2200-AD","names":["4/2AGSBSS-20/20-36/30-200-2200-ADS","4DSC30-36-300-2200-AD","F3630-300"],"notes":""},{"id":7452496702,"current":"4DSC30-74-380/520-4000-AD","names":["4/2AGSBSS-55/13-74/30-520-4000-ADS","4DSC30-74-380/520-4000-AD","F7430-520"],"notes":""},{"id":8823144321,"current":"4DSC30-74-380/550-4000-AD","names":["4/2AGSBSS-55/13-74/30-550-4000-ADS","4DSC30-74-380/550-4000-AD","F7430-550"],"notes":""},{"id":7238004247,"current":"4DSC9.5-90-110-1500","names":["4/2AGSBSS-48/5-90/9-110-1500-DC","4DSC9.5-90-110-1500","D9009-110"],"notes":""},{"id":7851426817,"current":"4DSC9.5-90-110-1500-AD","names":["4/2AGSBSS-48/5-90/9-110-1500-ADS","4DSC9.5-90-110-1500-AD","F9009-110"],"notes":""},{"id":8370595639,"current":"DCPM21-14-72-750","names":["2/2AGSFBR-10/17-14/21-72-750-DC","A1421-72","DCPM21-14-72-750"],"notes":""},{"id":2296100192,"current":"DCPM21-14-72-750-AD","names":["2/2AGSFBR-10/17-14/21-72-750-ADS","C1526-72","DCPM21-14-72-750-AD"],"notes":""},{"id":2200614175,"current":"DCPM50-17-110-1500","names":["3/3AGSFBR-10/25-17/50-110-1500-DC","A1750-110","AGSF3-2-26","AGSF3-2-26 AD","DCPM50-17-110-1500"],"notes":"Package names: AGSF3-2-26, AGSF3-2-26 AD"},{"id":7751534341,"current":"DCPM50-17-110-1500-HV","names":["3/3AGSFBR-10/25-17/50-110-1500-HV","B1750-110","DCPM50-17-110-1500-HV"],"notes":""},{"id":5027059115,"current":"DCPM60-20-300-2200-AD","names":["4/4AGSFBR-10/40-20/60-300-2200-ADS","C2060-300","DCPM60-20-300-2200-AD"],"notes":""}];
+
+  // ── Data layer ────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'pump_naming_tool_v1';
+
+  function loadData() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved) && saved.length > 0) return saved;
+      }
+    } catch {}
+    // First run — seed with built-in data
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(BUILT_IN_DATA));
+    return JSON.parse(JSON.stringify(BUILT_IN_DATA));
+  }
+
+  function saveData(recs) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(recs));
+    updateStats();
+  }
+
+  let records = loadData();
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  function updateStats() {
+    const total = records.reduce((s, r) => s + r.names.length, 0);
+    document.getElementById('stat-pumps').textContent = records.length;
+    document.getElementById('stat-names').textContent = total;
+    document.getElementById('stat-avg').textContent = records.length ? (total / records.length).toFixed(1) : '0';
+    document.getElementById('record-count-label').textContent = records.length + ' record' + (records.length !== 1 ? 's' : '');
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['search','admin'][i] === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'admin') renderRecords();
+    if (name === 'search') document.getElementById('search-input').focus();
+  }
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  function doSearch() {
+    const query = document.getElementById('search-input').value.trim().toLowerCase();
+    const container = document.getElementById('results');
+    if (!query) { container.innerHTML = ''; return; }
+
+    const hits = records.filter(r => r.names.some(n => n.toLowerCase().includes(query)));
+
+    if (hits.length === 0) {
+      container.innerHTML = `<div class="no-results"><div class="icon">&#128270;</div><div>No pump found matching "<strong>${escHtml(query)}</strong>"</div><div style="margin-top:8px;font-size:0.8rem;">Try a partial name, different spelling, or check Manage Records.</div></div>`;
+      return;
+    }
+
+    container.innerHTML = hits.map(r => {
+      const matchedSet = new Set(r.names.filter(n => n.toLowerCase().includes(query)));
+      const tags = r.names.map(n => {
+        const isCurrent = n === r.current;
+        const isMatched = matchedSet.has(n);
+        let cls = 'name-tag';
+        if (isMatched) cls += ' matched';
+        else if (isCurrent) cls += ' current-name';
+        return `<span class="${cls}">${escHtml(n)}${isCurrent && !isMatched ? ' &#9733;' : ''}</span>`;
+      }).join('');
+      const notes = r.notes ? `<div class="result-notes">&#128221; ${escHtml(r.notes)}</div>` : '';
+      return `<div class="result-card">
+        <div class="result-header">
+          <div class="result-title">${escHtml(r.current)}</div>
+          <span class="match-count">${r.names.length} name${r.names.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="names-list">${tags}</div>${notes}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Name tag editor ───────────────────────────────────────────────────────
+  let editingNames = [], editingId = null;
+
+  function focusNameInput() { document.getElementById('name-input').focus(); }
+
+  function handleNameKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const val = e.target.value.trim().replace(/,$/, '').trim();
+      if (val) addNameTag(val);
+      e.target.value = '';
+    }
+    if (e.key === 'Backspace' && e.target.value === '' && editingNames.length) {
+      editingNames.pop(); renderNameTags();
+    }
+  }
+
+  function addNameTag(name) {
+    if (!name) return;
+    if (editingNames.map(n => n.toLowerCase()).includes(name.toLowerCase())) return;
+    editingNames.push(name); renderNameTags();
+  }
+
+  function removeNameTag(idx) { editingNames.splice(idx, 1); renderNameTags(); }
+
+  function renderNameTags() {
+    const area = document.getElementById('names-area');
+    const input = document.getElementById('name-input');
+    area.querySelectorAll('.editable-tag').forEach(t => t.remove());
+    editingNames.forEach((name, i) => {
+      const tag = document.createElement('span');
+      tag.className = 'editable-tag';
+      tag.innerHTML = `${escHtml(name)} <button class="remove-name" onclick="removeNameTag(${i})" title="Remove">&times;</button>`;
+      area.insertBefore(tag, input);
+    });
+  }
+
+  // ── Form ──────────────────────────────────────────────────────────────────
+  function clearForm() {
+    document.getElementById('field-current').value = '';
+    document.getElementById('field-notes').value = '';
+    document.getElementById('name-input').value = '';
+    editingNames = []; editingId = null;
+    renderNameTags();
+    document.getElementById('form-title').textContent = '\u2795 Add New Pump Record';
+    document.getElementById('field-current').focus();
+  }
+
+  function saveRecord() {
+    const currentName = document.getElementById('field-current').value.trim();
+    if (!currentName) { showStatus('Please enter a current/preferred name.', 'error'); return; }
+    const pendingText = document.getElementById('name-input').value.trim();
+    if (pendingText) { addNameTag(pendingText); document.getElementById('name-input').value = ''; }
+    const allNames = [currentName];
+    editingNames.forEach(n => { if (!allNames.map(x => x.toLowerCase()).includes(n.toLowerCase())) allNames.push(n); });
+    const notes = document.getElementById('field-notes').value.trim();
+    if (editingId !== null) {
+      const idx = records.findIndex(r => r.id === editingId);
+      if (idx !== -1) { records[idx] = { id: editingId, current: currentName, names: allNames, notes }; showStatus('Record updated.', 'success'); }
+    } else {
+      records.push({ id: Date.now(), current: currentName, names: allNames, notes });
+      showStatus('Record saved.', 'success');
+    }
+    saveData(records); clearForm(); renderRecords(); doSearch();
+  }
+
+  function editRecord(id) {
+    const r = records.find(r => r.id === id);
+    if (!r) return;
+    switchTab('admin');
+    editingId = id;
+    editingNames = r.names.filter(n => n !== r.current);
+    document.getElementById('field-current').value = r.current;
+    document.getElementById('field-notes').value = r.notes || '';
+    document.getElementById('name-input').value = '';
+    renderNameTags();
+    document.getElementById('form-title').textContent = '\u270F\uFE0F Editing: ' + r.current;
+    document.getElementById('field-current').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function deleteRecord(id) {
+    const r = records.find(r => r.id === id);
+    if (!r) return;
+    if (!confirm(`Delete record for "${r.current}" and all its names?`)) return;
+    records = records.filter(r => r.id !== id);
+    saveData(records); renderRecords(); doSearch();
+    showStatus('Record deleted.', 'success');
+  }
+
+  // ── Records list ──────────────────────────────────────────────────────────
+  function renderRecords() {
+    const container = document.getElementById('records-list');
+    if (records.length === 0) { container.innerHTML = '<div class="empty-admin">No records yet. Add the first pump above.</div>'; return; }
+    const sorted = [...records].sort((a, b) => a.current.localeCompare(b.current));
+    container.innerHTML = sorted.map(r => {
+      const tags = r.names.map(n => {
+        const isCurrent = n === r.current;
+        return `<span class="name-tag${isCurrent ? ' current-name' : ''}">${escHtml(n)}${isCurrent ? ' &#9733;' : ''}</span>`;
+      }).join('');
+      return `<div class="pump-record">
+        <div class="pump-record-names">${tags}</div>
+        <div class="pump-record-actions">
+          <button class="btn-outline btn-sm" onclick="editRecord(${r.id})">Edit</button>
+          <button class="btn-danger btn-sm" onclick="deleteRecord(${r.id})">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Import / Export ───────────────────────────────────────────────────────
+  function exportData() {
+    if (records.length === 0) { showStatus('No records to export.', 'error'); return; }
+    const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pump-names-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus('Data exported.', 'success');
+  }
+
+  function showImportModal() { document.getElementById('import-text').value = ''; document.getElementById('import-modal').classList.add('show'); }
+  function closeImportModal() { document.getElementById('import-modal').classList.remove('show'); }
+
+  function doImport() {
+    const text = document.getElementById('import-text').value.trim();
+    if (!text) { showStatus('Paste JSON data first.', 'error'); return; }
+    try {
+      const imported = JSON.parse(text);
+      if (!Array.isArray(imported)) throw new Error();
+      let added = 0;
+      const existingIds = new Set(records.map(r => r.id));
+      imported.forEach(r => { if (r.id && r.current && Array.isArray(r.names) && !existingIds.has(r.id)) { records.push(r); added++; } });
+      saveData(records); renderRecords(); doSearch(); closeImportModal();
+      showStatus(`Imported ${added} new record${added !== 1 ? 's' : ''}.`, 'success');
+    } catch { showStatus('Invalid JSON.', 'error'); }
+  }
+
+  // ── Utilities ─────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let statusTimer;
+  function showStatus(msg, type) {
+    const bar = document.getElementById('status-bar');
+    bar.textContent = (type === 'success' ? '\u2713 ' : '\u26A0 ') + msg;
+    bar.className = 'show ' + type;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => bar.classList.remove('show'), 3000);
+  }
+
+  // ── Keyboard shortcut ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault(); switchTab('search');
+      document.getElementById('search-input').select();
+    }
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  updateStats();
+  renderRecords();
+  document.getElementById('search-input').focus();
+</script>
+</body>
+</html>
